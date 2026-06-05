@@ -1,92 +1,104 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def treasure_detail_view(page: ft.Page, treasure_id: int):
+    con = get_connection()
 
-    def load_treasure():
-        con = get_connection()
-        result = con.execute(
-            "SELECT id, name, grade, stat, effect FROM treasure WHERE id = ?",
-            [treasure_id],
-        ).fetchone()
-        con.close()
-        return result
+    row = con.execute(
+        """
+        SELECT t.treasure_id, t.treasure_name, t.image_path,
+               t.grade_code, g.grade_name,
+               t.level, t.cur_ability, t.next_ability, t.series_name
+        FROM treasure t
+        JOIN grade g ON t.grade_code = g.grade_code
+        WHERE t.treasure_id = ?
+        """,
+        [treasure_id]
+    ).fetchone()
 
-    treasure = load_treasure()
-
-    if not treasure:
+    if not row:
         return ft.View(
             route=f"/treasures/{treasure_id}",
-            controls=[ft.Text("보물 정보를 찾을 수 없습니다.")],
+            controls=[ft.Text("보물 정보를 찾을 수 없습니다.")]
         )
 
-    t_id, name, grade, stat, effect = treasure
+    _, treasure_name, image_path, grade_code, grade_name, level, cur_ability, next_ability, series_name = row
+
+    if image_path:
+        img = ft.Image(src=image_path, width=180, height=180, fit="contain")
+    else:
+        img = ft.Container(width=180, height=180, bgcolor="#3a3a5c", border_radius=8)
 
     return ft.View(
         route=f"/treasures/{treasure_id}",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 3),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
-                        scroll=ft.ScrollMode.AUTO,
                         controls=[
                             ft.Container(
-                                content=ft.ElevatedButton(
-                                    content=ft.Text("← 목록"),
-                                    on_click=lambda e: page.go("/treasures"),
-                                ),
-                                padding=10,
+                                content=ft.ElevatedButton("← 목록", on_click=lambda e: page.go("/treasures")),
+                                padding=16,
                             ),
-                            ft.Divider(),
                             ft.Container(
-                                content=ft.Column(
+                                content=ft.Row(
                                     controls=[
-                                        ft.Icon(ft.Icons.DIAMOND, size=80),
-                                        ft.Text(
-                                            name, size=22, weight=ft.FontWeight.BOLD
+                                        img,
+                                        ft.Column(
+                                            controls=[
+                                                ft.Text(treasure_name, size=22, weight=ft.FontWeight.BOLD),
+                                                ft.Text(f"등급 : {grade_name}", size=14),
+                                                ft.Text(f"시리즈 : {series_name or '-'}", size=14),
+                                                ft.Text(f"레벨 : {level if level else '-'}", size=14),
+                                                ft.Text(f"현재 능력 : {cur_ability or '-'}", size=14),
+                                                ft.Text(f"다음 능력 : {next_ability or '-'}", size=14),
+                                            ],
+                                            spacing=8,
                                         ),
-                                        ft.Text(
-                                            f"등급: {grade if grade else '-'}", size=14
-                                        ),
-                                    ]
+                                    ],
+                                    spacing=24,
                                 ),
-                                padding=20,
-                            ),
-                            ft.Divider(),
-                            ft.Container(
-                                content=ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "능력치", size=16, weight=ft.FontWeight.BOLD
-                                        ),
-                                        ft.Text(
-                                            stat if stat else "능력치 정보 없음",
-                                            size=13,
-                                            color=ft.Colors.GREY_700,
-                                        ),
-                                        ft.Divider(),
-                                        ft.Text(
-                                            "효과", size=16, weight=ft.FontWeight.BOLD
-                                        ),
-                                        ft.Text(
-                                            effect if effect else "효과 정보 없음",
-                                            size=13,
-                                            color=ft.Colors.GREY_700,
-                                        ),
-                                    ]
-                                ),
-                                padding=20,
+                                padding=16,
                             ),
                         ],
+                        expand=True,
+                        spacing=0,
+                        scroll=ft.ScrollMode.AUTO,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

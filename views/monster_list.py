@@ -1,107 +1,120 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def monster_list_view(page: ft.Page):
+    con = get_connection()
 
-    def load_monsters(keyword=""):
-        con = get_connection()
-        if keyword:
-            result = con.execute(
-                "SELECT id, name, hp, attribute, weak_attribute FROM monster WHERE name LIKE ?",
-                [f"%{keyword}%"],
-            ).fetchall()
-        else:
-            result = con.execute(
-                "SELECT id, name, hp, attribute, weak_attribute FROM monster"
-            ).fetchall()
-        con.close()
-        return result
+    def load_monsters(search=""):
+        return con.execute(
+            "SELECT monster_id, monster_name, hp, power, atk, def FROM monster WHERE monster_name LIKE ? ORDER BY monster_name",
+            [f"%{search}%"]
+        ).fetchall()
 
-    def monster_row(monster):
-        monster_id, name, hp, attribute, weak_attribute = monster
-        return ft.GestureDetector(
-            on_tap=lambda e, mid=monster_id: page.go(f"/monsters/{mid}"),
-            content=ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.BUG_REPORT, size=40),
-                        ft.Text(name, width=150, size=13),
-                        ft.Text(str(hp) if hp else "-", width=100, size=13),
-                        ft.Text(attribute if attribute else "-", width=100, size=13),
-                        ft.Text(
-                            weak_attribute if weak_attribute else "-",
-                            expand=True,
-                            size=13,
-                        ),
+    def build_table(rows):
+        data_rows = []
+        for row in rows:
+            monster_id, monster_name, hp, power, atk, def_ = row
+            data_rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Container(width=40, height=40, bgcolor="#3a3a5c", border_radius=4)),
+                        ft.DataCell(ft.Text(monster_name, size=13)),
+                        ft.DataCell(ft.Text(str(hp) if hp else "-", size=13)),
+                        ft.DataCell(ft.Text(str(power) if power else "-", size=13)),
+                        ft.DataCell(ft.Text(str(atk) if atk else "-", size=13)),
+                        ft.DataCell(ft.Text(str(def_) if def_ else "-", size=13)),
                     ],
-                    spacing=10,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                padding=ft.Padding(top=8, bottom=8, left=10, right=10),
-                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_300)),
-            ),
-        )
+                )
+            )
+        return data_rows
 
-    def table_header():
-        return ft.Container(
-            content=ft.Row(
-                controls=[
-                    ft.Text("아이콘", width=50, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text("몬스터명", width=150, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text("HP", width=100, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text("속성", width=100, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text(
-                        "취약 속성", expand=True, size=13, weight=ft.FontWeight.BOLD
-                    ),
-                ],
-                spacing=10,
-            ),
-            padding=ft.Padding(top=8, bottom=8, left=10, right=10),
-            bgcolor=ft.Colors.GREY_200,
-        )
-
-    search_field = ft.TextField(
-        hint_text="🔍 몬스터 검색...",
-        expand=True,
-        on_submit=lambda e: refresh_list(e.control.value),
+    table = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("아이콘")),
+            ft.DataColumn(ft.Text("몬스터명")),
+            ft.DataColumn(ft.Text("HP")),
+            ft.DataColumn(ft.Text("전투력")),
+            ft.DataColumn(ft.Text("공격력")),
+            ft.DataColumn(ft.Text("방어력")),
+        ],
+        rows=build_table(load_monsters()),
+        border=ft.Border(
+            top=ft.BorderSide(1, "#333333"),
+            bottom=ft.BorderSide(1, "#333333"),
+            left=ft.BorderSide(1, "#333333"),
+            right=ft.BorderSide(1, "#333333"),
+        ),
+        border_radius=8,
+        horizontal_lines=ft.BorderSide(1, "#333333"),
     )
 
-    filter_btn = ft.ElevatedButton(content=ft.Text("필터 ▼"), on_click=lambda e: None)
-
-    monster_list = ft.Column(expand=True, scroll=ft.ScrollMode.AUTO, spacing=0)
-
-    def refresh_list(keyword=""):
-        monster_list.controls.clear()
-        monsters = load_monsters(keyword)
-        for m in monsters:
-            monster_list.controls.append(monster_row(m))
+    def on_search(e):
+        table.rows = build_table(load_monsters(e.control.value))
         page.update()
-
-    refresh_list()
 
     return ft.View(
         route="/monsters",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 5),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
                         controls=[
                             ft.Container(
-                                content=ft.Row(controls=[search_field, filter_btn]),
-                                padding=10,
+                                content=ft.Text("Kingdom Deck Builder", size=20, weight=ft.FontWeight.BOLD),
+                                padding=16,
                             ),
-                            table_header(),
-                            monster_list,
+                            ft.Container(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.TextField(hint_text="몬스터 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
+                                        ft.ElevatedButton("필터 ▼"),
+                                    ]
+                                ),
+                                padding=ft.Padding(left=16, right=16, top=0, bottom=0),
+                            ),
+                            ft.Container(
+                                content=ft.Column(controls=[table], scroll=ft.ScrollMode.AUTO),
+                                expand=True,
+                                padding=16,
+                            ),
                         ],
+                        expand=True,
+                        spacing=0,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

@@ -1,93 +1,114 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def content_list_view(page: ft.Page):
+    con = get_connection()
 
-    def load_contents(keyword=""):
-        con = get_connection()
-        if keyword:
-            result = con.execute(
-                "SELECT id, name, content_type FROM content WHERE name LIKE ?",
-                [f"%{keyword}%"],
-            ).fetchall()
-        else:
-            result = con.execute(
-                "SELECT id, name, content_type FROM content"
-            ).fetchall()
-        con.close()
-        return result
+    def load_contents(search=""):
+        return con.execute(
+            "SELECT content_id, content_name, content_type_name FROM content WHERE content_name LIKE ? ORDER BY content_type_name, content_name",
+            [f"%{search}%"]
+        ).fetchall()
 
-    def content_row(content):
-        content_id, name, content_type = content
-        return ft.GestureDetector(
-            on_tap=lambda e, cid=content_id: page.go(f"/contents/{cid}"),
-            content=ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(
-                            ft.Icons.SPORTS_ESPORTS, size=40, color=ft.Colors.BLUE_400
-                        ),
-                        ft.Column(
-                            controls=[
-                                ft.Text(name, size=15, weight=ft.FontWeight.BOLD),
-                                ft.Text(
-                                    f"종류: {'몬스터형' if content_type == 'monster' else '아레나형'}",
-                                    size=12,
-                                    color=ft.Colors.GREY_600,
-                                ),
-                            ],
-                            spacing=4,
-                        ),
+    def build_table(rows):
+        data_rows = []
+        for row in rows:
+            content_id, content_name, content_type_name = row
+            data_rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Container(width=40, height=40, bgcolor="#3a3a5c", border_radius=4)),
+                        ft.DataCell(ft.Text(content_name, size=13)),
+                        ft.DataCell(ft.Text(content_type_name or "-", size=13)),
                     ],
-                    spacing=16,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                padding=ft.Padding(top=12, bottom=12, left=16, right=16),
-                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_300)),
-            ),
-        )
+                )
+            )
+        return data_rows
 
-    search_field = ft.TextField(
-        hint_text="🔍 컨텐츠 검색...",
-        expand=True,
-        on_submit=lambda e: refresh_list(e.control.value),
+    table = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("아이콘")),
+            ft.DataColumn(ft.Text("컨텐츠명")),
+            ft.DataColumn(ft.Text("유형")),
+        ],
+        rows=build_table(load_contents()),
+        border=ft.Border(
+            top=ft.BorderSide(1, "#333333"),
+            bottom=ft.BorderSide(1, "#333333"),
+            left=ft.BorderSide(1, "#333333"),
+            right=ft.BorderSide(1, "#333333"),
+        ),
+        border_radius=8,
+        horizontal_lines=ft.BorderSide(1, "#333333"),
     )
 
-    filter_btn = ft.ElevatedButton(content=ft.Text("필터 ▼"), on_click=lambda e: None)
-
-    content_list = ft.Column(expand=True, scroll=ft.ScrollMode.AUTO, spacing=0)
-
-    def refresh_list(keyword=""):
-        content_list.controls.clear()
-        contents = load_contents(keyword)
-        for c in contents:
-            content_list.controls.append(content_row(c))
+    def on_search(e):
+        table.rows = build_table(load_contents(e.control.value))
         page.update()
-
-    refresh_list()
 
     return ft.View(
         route="/contents",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 4),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
                         controls=[
                             ft.Container(
-                                content=ft.Row(controls=[search_field, filter_btn]),
-                                padding=10,
+                                content=ft.Text("Kingdom Deck Builder", size=20, weight=ft.FontWeight.BOLD),
+                                padding=16,
                             ),
-                            content_list,
+                            ft.Container(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.TextField(hint_text="컨텐츠 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
+                                        ft.ElevatedButton("필터 ▼"),
+                                    ]
+                                ),
+                                padding=ft.Padding(left=16, right=16, top=0, bottom=0),
+                            ),
+                            ft.Container(
+                                content=ft.Column(controls=[table], scroll=ft.ScrollMode.AUTO),
+                                expand=True,
+                                padding=16,
+                            ),
                         ],
+                        expand=True,
+                        spacing=0,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

@@ -1,104 +1,146 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def arena_list_view(page: ft.Page):
+    con = get_connection()
 
-    def load_arena_teams(keyword=""):
-        con = get_connection()
-        if keyword:
-            result = con.execute(
-                "SELECT id, name FROM arena_defense_team WHERE name LIKE ?",
-                [f"%{keyword}%"],
-            ).fetchall()
-        else:
-            result = con.execute("SELECT id, name FROM arena_defense_team").fetchall()
-        con.close()
-        return result
-
-    def load_team_cookies(team_id):
-        con = get_connection()
-        result = con.execute(
-            """
-            SELECT c.name FROM arena_team_cookie atc
-            JOIN cookie c ON atc.cookie_id = c.id
-            WHERE atc.team_id = ?
-            """,
-            [team_id],
+    def load_teams(search=""):
+        return con.execute(
+            "SELECT team_id, user_name, memo FROM arena_defense_team WHERE user_name LIKE ? ORDER BY team_id",
+            [f"%{search}%"]
         ).fetchall()
-        con.close()
-        return [r[0] for r in result]
 
-    def arena_row(team):
-        team_id, name = team
-        cookies = load_team_cookies(team_id)
-        cookie_names = ", ".join(cookies) if cookies else "쿠키 정보 없음"
-        return ft.GestureDetector(
-            on_tap=lambda e, tid=team_id: page.go(f"/arena/{tid}"),
-            content=ft.Container(
-                content=ft.Row(
-                    controls=[
-                        ft.Icon(ft.Icons.SECURITY, size=40, color=ft.Colors.BLUE_400),
-                        ft.Column(
-                            controls=[
-                                ft.Text(name, size=14, weight=ft.FontWeight.BOLD),
-                                ft.Text(
-                                    f"쿠키 구성: {cookie_names}",
-                                    size=12,
-                                    color=ft.Colors.GREY_600,
-                                ),
-                            ],
-                            spacing=4,
-                        ),
-                    ],
-                    spacing=16,
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                ),
-                padding=ft.Padding(top=12, bottom=12, left=16, right=16),
-                border=ft.Border(bottom=ft.BorderSide(1, ft.Colors.GREY_300)),
-            ),
-        )
+    def get_team_cookies(team_id):
+        return con.execute(
+            """
+            SELECT c.cookie_name
+            FROM arena_team_cookie atc
+            JOIN cookie c ON atc.cookie_id = c.cookie_id
+            WHERE atc.team_id = ?
+            ORDER BY atc.slot_no
+            """,
+            [team_id]
+        ).fetchall()
 
-    search_field = ft.TextField(
-        hint_text="🔍 방어 팀 검색...",
-        expand=True,
-        on_submit=lambda e: refresh_list(e.control.value),
-    )
+    def get_team_treasures(team_id):
+        return con.execute(
+            """
+            SELECT t.treasure_name
+            FROM arena_team_treasure att
+            JOIN treasure t ON att.treasure_id = t.treasure_id
+            WHERE att.team_id = ?
+            ORDER BY att.slot_no
+            """,
+            [team_id]
+        ).fetchall()
 
-    filter_btn = ft.ElevatedButton(content=ft.Text("필터 ▼"), on_click=lambda e: None)
+    def build_list(rows):
+        items = []
+        for row in rows:
+            team_id, user_name, memo = row
+            cookies = get_team_cookies(team_id)
+            treasures = get_team_treasures(team_id)
+            cookie_text = ", ".join([c[0] for c in cookies]) if cookies else "-"
+            treasure_text = ", ".join([t[0] for t in treasures]) if treasures else "-"
+            items.append(
+                ft.Container(
+                    content=ft.Row(
+                        controls=[
+                            ft.Column(
+                                controls=[
+                                    ft.Text("방어팀 유저이름", size=11, color="grey"),
+                                    ft.Text(user_name or "-", size=15, weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"보물 : {treasure_text}", size=12),
+                                    ft.Text(memo or "-", size=12, color="grey"),
+                                ],
+                                spacing=4,
+                                expand=True,
+                            ),
+                            ft.Column(
+                                controls=[
+                                    ft.Text(f"쿠키 구성 : {cookie_text}", size=12),
+                                ],
+                                expand=True,
+                            ),
+                        ],
+                    ),
+                    padding=16,
+                    border=ft.Border(bottom=ft.BorderSide(1, "#333333")),
+                )
+            )
+        return items
 
-    arena_list = ft.Column(expand=True, scroll=ft.ScrollMode.AUTO, spacing=0)
+    list_column = ft.Column(scroll=ft.ScrollMode.AUTO)
 
-    def refresh_list(keyword=""):
-        arena_list.controls.clear()
-        teams = load_arena_teams(keyword)
-        for t in teams:
-            arena_list.controls.append(arena_row(t))
+    def refresh(search=""):
+        rows = load_teams(search)
+        list_column.controls = build_list(rows) if rows else [ft.Text("방어팀 데이터가 없습니다.", color="grey")]
         page.update()
 
-    refresh_list()
+    def on_search(e):
+        refresh(e.control.value)
+
+    refresh()
 
     return ft.View(
         route="/arena",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 6),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
                         controls=[
                             ft.Container(
-                                content=ft.Row(controls=[search_field, filter_btn]),
-                                padding=10,
+                                content=ft.Text("Kingdom Deck Builder", size=20, weight=ft.FontWeight.BOLD),
+                                padding=16,
                             ),
-                            arena_list,
+                            ft.Container(
+                                content=ft.Row(
+                                    controls=[
+                                        ft.TextField(hint_text="방어팀 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
+                                        ft.ElevatedButton("필터 ▼"),
+                                    ]
+                                ),
+                                padding=ft.Padding(left=16, right=16, top=0, bottom=0),
+                            ),
+                            ft.Container(content=list_column, expand=True, padding=16),
                         ],
+                        expand=True,
+                        spacing=0,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

@@ -1,201 +1,180 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def team_build_view(page: ft.Page):
+    con = get_connection()
 
-    def load_cookies():
-        con = get_connection()
-        result = con.execute("SELECT id, name FROM cookie").fetchall()
-        con.close()
-        return result
+    cookies = con.execute("SELECT cookie_id, cookie_name FROM cookie ORDER BY cookie_name").fetchall()
+    tarts = con.execute("SELECT tart_id, tart_name FROM tart ORDER BY tart_name").fetchall()
+    biscuits = con.execute("SELECT biscuit_id, biscuit_name FROM biscuit ORDER BY biscuit_name").fetchall()
+    treasures = con.execute("SELECT treasure_id, treasure_name FROM treasure ORDER BY treasure_name").fetchall()
+    contents = con.execute("SELECT content_id, content_name FROM content ORDER BY content_name").fetchall()
 
-    def load_toppings():
-        con = get_connection()
-        result = con.execute("SELECT id, name FROM topping").fetchall()
-        con.close()
-        return result
+    cookie_options = [ft.dropdown.Option(str(c[0]), c[1]) for c in cookies]
+    tart_options = [ft.dropdown.Option(str(t[0]), t[1]) for t in tarts]
+    biscuit_options = [ft.dropdown.Option(str(b[0]), b[1]) for b in biscuits]
+    treasure_options = [ft.dropdown.Option(str(t[0]), t[1]) for t in treasures]
+    content_options = [ft.dropdown.Option(str(c[0]), c[1]) for c in contents]
 
-    def load_biscuits():
-        con = get_connection()
-        result = con.execute("SELECT id, name FROM biscuit").fetchall()
-        con.close()
-        return result
+    content_dd = ft.Dropdown(label="컨텐츠 선택", options=content_options, width=300)
+    team_name_field = ft.TextField(label="팀 이름 입력", width=200)
 
-    def load_treasures():
-        con = get_connection()
-        result = con.execute("SELECT id, name FROM treasure").fetchall()
-        con.close()
-        return result
-
-    def load_contents():
-        con = get_connection()
-        result = con.execute("SELECT id, name FROM content").fetchall()
-        con.close()
-        return result
-
-    cookies = load_cookies()
-    toppings = load_toppings()
-    biscuits = load_biscuits()
-    treasures = load_treasures()
-    contents = load_contents()
-
-    team_slots = []
-
-    def make_slot(slot_index):
-        cookie_dd = ft.Dropdown(
-            label="쿠키 선택",
-            width=150,
-            options=[ft.dropdown.Option(str(c[0]), c[1]) for c in cookies],
-        )
-        topping_dd = ft.Dropdown(
-            label="토핑 선택",
-            width=150,
-            options=[ft.dropdown.Option(str(t[0]), t[1]) for t in toppings],
-        )
-        biscuit_dd = ft.Dropdown(
-            label="비스킷 선택",
-            width=150,
-            options=[ft.dropdown.Option(str(b[0]), b[1]) for b in biscuits],
-        )
-        level_dd = ft.Dropdown(
-            label="레벨",
-            width=90,
-            options=[ft.dropdown.Option(str(i)) for i in range(1, 76)],
-            value="1",
-        )
-        star_dd = ft.Dropdown(
-            label="별",
-            width=90,
-            options=[ft.dropdown.Option(str(i)) for i in range(1, 6)],
-            value="1",
-        )
-        transcendence_dd = ft.Dropdown(
-            label="초월",
-            width=90,
-            options=[ft.dropdown.Option(str(i)) for i in range(0, 6)],
-            value="0",
-        )
-
-        return {
-            "cookie": cookie_dd,
-            "topping": topping_dd,
-            "biscuit": biscuit_dd,
-            "level": level_dd,
-            "star": star_dd,
-            "transcendence": transcendence_dd,
-            "widget": ft.Card(
-                content=ft.Container(
-                    padding=12,
-                    content=ft.Column(
-                        controls=[
-                            ft.Text(
-                                f"슬롯 {slot_index + 1}",
-                                size=14,
-                                weight=ft.FontWeight.BOLD,
-                            ),
-                            ft.Row(
-                                controls=[
-                                    cookie_dd,
-                                    level_dd,
-                                    star_dd,
-                                    transcendence_dd,
-                                ],
-                                wrap=True,
-                                spacing=8,
-                            ),
-                            ft.Row(controls=[topping_dd, biscuit_dd], spacing=8),
-                        ]
-                    ),
-                )
-            ),
-        }
-
+    slots = []
     for i in range(5):
-        team_slots.append(make_slot(i))
+        slots.append({
+            "cookie": ft.Dropdown(label="쿠키 선택", options=cookie_options, width=150),
+            "level": ft.Dropdown(label="레벨", options=[ft.dropdown.Option(str(v)) for v in range(1, 101)], width=80),
+            "star": ft.Dropdown(label="별", options=[ft.dropdown.Option(str(v)) for v in range(0, 6)], width=80),
+            "transcendence": ft.Dropdown(label="초월", options=[ft.dropdown.Option(str(v)) for v in range(0, 6)], width=80),
+            "tart": ft.Dropdown(label="토핑", options=tart_options, width=150),
+            "biscuit": ft.Dropdown(label="비스킷", options=biscuit_options, width=150),
+        })
 
-    treasure_dropdowns = [
-        ft.Dropdown(
-            label=f"보물 {i + 1}",
-            width=160,
-            options=[ft.dropdown.Option(str(t[0]), t[1]) for t in treasures],
-        )
+    treasure_dds = [
+        ft.Dropdown(label=f"보물 {i+1}", options=treasure_options, width=150)
         for i in range(3)
     ]
 
-    content_dd = ft.Dropdown(
-        label="컨텐츠 선택",
-        width=200,
-        options=[ft.dropdown.Option(str(c[0]), c[1]) for c in contents],
-    )
+    def save_team(e):
+        con2 = get_connection()
+        team_id = con2.execute("SELECT COALESCE(MAX(team_id), 0) + 1 FROM team").fetchone()[0]
+        content_id = int(content_dd.value) if content_dd.value else None
 
-    team_name_field = ft.TextField(label="팀 이름", width=200, hint_text="팀 이름 입력")
+        con2.execute(
+            "INSERT INTO team VALUES (?, ?, NULL, CURRENT_TIMESTAMP, ?)",
+            [team_id, team_name_field.value or f"팀 {team_id}", content_id]
+        )
 
-    save_btn = ft.ElevatedButton(
-        content=ft.Text("팀 편성 저장"), on_click=lambda e: page.go("/team/save")
-    )
+        for i, slot in enumerate(slots):
+            if slot["cookie"].value:
+                tc_id = con2.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM team_cookie").fetchone()[0]
+                con2.execute(
+                    "INSERT INTO team_cookie VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    [
+                        tc_id,
+                        int(slot["level"].value) if slot["level"].value else 1,
+                        int(slot["star"].value) if slot["star"].value else 0,
+                        int(slot["transcendence"].value) if slot["transcendence"].value else 0,
+                        i + 1,
+                        team_id,
+                        int(slot["cookie"].value),
+                        int(slot["tart"].value) if slot["tart"].value else None,
+                        int(slot["biscuit"].value) if slot["biscuit"].value else None,
+                    ]
+                )
+
+        con2.close()
+        page.go("/team/save")
+
+    slot_rows = []
+    for i, slot in enumerate(slots):
+        slot_rows.append(
+            ft.Container(
+                content=ft.Row(
+                    controls=[
+                        ft.Text(f"슬롯{i+1}", width=50),
+                        slot["cookie"],
+                        slot["level"],
+                        slot["star"],
+                        slot["transcendence"],
+                        slot["tart"],
+                        slot["biscuit"],
+                    ],
+                    spacing=8,
+                ),
+                padding=ft.Padding(left=0, right=0, top=4, bottom=4),
+            )
+        )
 
     return ft.View(
         route="/team",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 7),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
-                        scroll=ft.ScrollMode.AUTO,
                         controls=[
+                            ft.Container(
+                                content=ft.Text("Kingdom Deck Builder", size=20, weight=ft.FontWeight.BOLD),
+                                padding=16,
+                            ),
                             ft.Container(
                                 content=ft.Column(
                                     controls=[
-                                        ft.Text(
-                                            "팀 편성",
-                                            size=22,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        ft.Divider(),
-                                        ft.Text(
-                                            "컨텐츠 선택",
-                                            size=16,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        content_dd,
-                                        ft.Divider(),
-                                        ft.Text(
-                                            "쿠키 편성 (최대 5명)",
-                                            size=16,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        ft.Column(
+                                        ft.Row(
                                             controls=[
-                                                slot["widget"] for slot in team_slots
+                                                ft.Column(
+                                                    controls=[
+                                                        ft.Text("팀편성", size=16, weight=ft.FontWeight.BOLD),
+                                                        content_dd,
+                                                    ],
+                                                    spacing=8,
+                                                ),
+                                                ft.Column(
+                                                    controls=[
+                                                        ft.Text("보물 선택(최대 3개)", size=16, weight=ft.FontWeight.BOLD),
+                                                        ft.Row(controls=treasure_dds, spacing=8),
+                                                    ],
+                                                    spacing=8,
+                                                ),
                                             ],
-                                            spacing=10,
+                                            spacing=40,
                                         ),
                                         ft.Divider(),
-                                        ft.Text(
-                                            "보물 선택 (최대 3개)",
-                                            size=16,
-                                            weight=ft.FontWeight.BOLD,
-                                        ),
-                                        ft.Row(controls=treasure_dropdowns, spacing=10),
+                                        ft.Text("쿠키편성(최대 5명)", size=14, weight=ft.FontWeight.BOLD),
+                                        *slot_rows,
                                         ft.Divider(),
                                         ft.Row(
-                                            controls=[team_name_field, save_btn],
+                                            controls=[
+                                                team_name_field,
+                                                ft.ElevatedButton("팀 편성 저장", on_click=save_team),
+                                            ],
                                             spacing=16,
-                                            vertical_alignment=ft.CrossAxisAlignment.END,
                                         ),
-                                    ]
+                                    ],
+                                    spacing=8,
+                                    scroll=ft.ScrollMode.AUTO,
                                 ),
-                                padding=20,
-                            )
+                                expand=True,
+                                padding=16,
+                            ),
                         ],
+                        expand=True,
+                        spacing=0,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

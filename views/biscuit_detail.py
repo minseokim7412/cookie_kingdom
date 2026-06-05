@@ -1,92 +1,104 @@
 import flet as ft
 from db.database import get_connection
-from views.cookie_list import sidebar
+
+
+def sidebar(page):
+    def nav(route):
+        page.go(route)
+    return ft.Container(
+        width=150,
+        bgcolor="#1a1a2e",
+        content=ft.Column(
+            controls=[
+                ft.Container(
+                    content=ft.Text("Kingdom\nDeck Builder", size=16, weight=ft.FontWeight.BOLD, color="white", text_align=ft.TextAlign.CENTER),
+                    padding=20,
+                ),
+                ft.Divider(color="white24"),
+                ft.TextButton("쿠키", on_click=lambda e: nav("/cookies"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("타르트", on_click=lambda e: nav("/toppings"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("비스킷", on_click=lambda e: nav("/biscuits"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("보물", on_click=lambda e: nav("/treasures"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("컨텐츠", on_click=lambda e: nav("/contents"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("몬스터", on_click=lambda e: nav("/monsters"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("아레나 방어팀", on_click=lambda e: nav("/arena"), style=ft.ButtonStyle(color="white")),
+                ft.TextButton("팀편성", on_click=lambda e: nav("/team"), style=ft.ButtonStyle(color="white")),
+            ],
+            spacing=0,
+        ),
+    )
 
 
 def biscuit_detail_view(page: ft.Page, biscuit_id: int):
+    con = get_connection()
 
-    def load_biscuit():
-        con = get_connection()
-        result = con.execute(
-            "SELECT id, name, grade, stat, effect FROM biscuit WHERE id = ?",
-            [biscuit_id],
-        ).fetchone()
-        con.close()
-        return result
+    row = con.execute(
+        """
+        SELECT b.biscuit_id, b.biscuit_name, b.image_path,
+               b.grade_code, g.grade_name,
+               b.level, b.atk, b.hp, b.extra_stat
+        FROM biscuit b
+        JOIN grade g ON b.grade_code = g.grade_code
+        WHERE b.biscuit_id = ?
+        """,
+        [biscuit_id]
+    ).fetchone()
 
-    biscuit = load_biscuit()
-
-    if not biscuit:
+    if not row:
         return ft.View(
             route=f"/biscuits/{biscuit_id}",
-            controls=[ft.Text("비스킷 정보를 찾을 수 없습니다.")],
+            controls=[ft.Text("비스킷 정보를 찾을 수 없습니다.")]
         )
 
-    b_id, name, grade, stat, effect = biscuit
+    _, biscuit_name, image_path, grade_code, grade_name, level, atk, hp, extra_stat = row
+
+    if image_path:
+        img = ft.Image(src=image_path, width=180, height=180, fit="contain")
+    else:
+        img = ft.Container(width=180, height=180, bgcolor="#3a3a5c", border_radius=8)
 
     return ft.View(
         route=f"/biscuits/{biscuit_id}",
+        padding=0,
         controls=[
             ft.Row(
-                expand=True,
                 controls=[
-                    sidebar(page, 2),
+                    sidebar(page),
                     ft.VerticalDivider(width=1),
                     ft.Column(
-                        expand=True,
-                        scroll=ft.ScrollMode.AUTO,
                         controls=[
                             ft.Container(
-                                content=ft.ElevatedButton(
-                                    content=ft.Text("← 목록"),
-                                    on_click=lambda e: page.go("/biscuits"),
-                                ),
-                                padding=10,
+                                content=ft.ElevatedButton("← 목록", on_click=lambda e: page.go("/biscuits")),
+                                padding=16,
                             ),
-                            ft.Divider(),
                             ft.Container(
-                                content=ft.Column(
+                                content=ft.Row(
                                     controls=[
-                                        ft.Icon(ft.Icons.STAR, size=80),
-                                        ft.Text(
-                                            name, size=22, weight=ft.FontWeight.BOLD
+                                        img,
+                                        ft.Column(
+                                            controls=[
+                                                ft.Text(biscuit_name, size=22, weight=ft.FontWeight.BOLD),
+                                                ft.Text(f"등급 : {grade_name}", size=14),
+                                                ft.Text(f"레벨 : {level if level else '-'}", size=14),
+                                                ft.Text(f"공격력 : {atk if atk else '-'}", size=14),
+                                                ft.Text(f"체력 : {hp if hp else '-'}", size=14),
+                                                ft.Text(f"추가 능력치 : {extra_stat if extra_stat else '-'}", size=14),
+                                            ],
+                                            spacing=8,
                                         ),
-                                        ft.Text(
-                                            f"등급: {grade if grade else '-'}", size=14
-                                        ),
-                                    ]
+                                    ],
+                                    spacing=24,
                                 ),
-                                padding=20,
-                            ),
-                            ft.Divider(),
-                            ft.Container(
-                                content=ft.Column(
-                                    controls=[
-                                        ft.Text(
-                                            "능력치", size=16, weight=ft.FontWeight.BOLD
-                                        ),
-                                        ft.Text(
-                                            stat if stat else "능력치 정보 없음",
-                                            size=13,
-                                            color=ft.Colors.GREY_700,
-                                        ),
-                                        ft.Divider(),
-                                        ft.Text(
-                                            "효과", size=16, weight=ft.FontWeight.BOLD
-                                        ),
-                                        ft.Text(
-                                            effect if effect else "효과 정보 없음",
-                                            size=13,
-                                            color=ft.Colors.GREY_700,
-                                        ),
-                                    ]
-                                ),
-                                padding=20,
+                                padding=16,
                             ),
                         ],
+                        expand=True,
+                        spacing=0,
+                        scroll=ft.ScrollMode.AUTO,
                     ),
                 ],
+                expand=True,
+                spacing=0,
             )
         ],
-        padding=0,
     )

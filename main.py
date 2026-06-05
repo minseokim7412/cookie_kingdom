@@ -16,74 +16,58 @@ def main(page: ft.Page):
 
         if route == "/" or route == "/cookies":
             from views.cookie_list import cookie_list_view
-
             page.views.append(cookie_list_view(page))
+
         elif route.startswith("/cookies/"):
             cookie_id = int(route.split("/")[-1])
             from views.cookie_detail import cookie_detail_view
-
             page.views.append(cookie_detail_view(page, cookie_id))
+
         elif route == "/toppings":
             from views.topping_list import topping_list_view
-
             page.views.append(topping_list_view(page))
+
         elif route.startswith("/toppings/"):
             topping_id = int(route.split("/")[-1])
             from views.topping_detail import topping_detail_view
-
             page.views.append(topping_detail_view(page, topping_id))
+
         elif route == "/biscuits":
             from views.biscuit_list import biscuit_list_view
-
             page.views.append(biscuit_list_view(page))
+
         elif route.startswith("/biscuits/"):
             biscuit_id = int(route.split("/")[-1])
             from views.biscuit_detail import biscuit_detail_view
-
             page.views.append(biscuit_detail_view(page, biscuit_id))
+
         elif route == "/treasures":
             from views.treasure_list import treasure_list_view
-
             page.views.append(treasure_list_view(page))
+
         elif route.startswith("/treasures/"):
             treasure_id = int(route.split("/")[-1])
             from views.treasure_detail import treasure_detail_view
-
             page.views.append(treasure_detail_view(page, treasure_id))
+
         elif route == "/contents":
             from views.content_list import content_list_view
-
             page.views.append(content_list_view(page))
-        elif route.startswith("/contents/"):
-            content_id = int(route.split("/")[-1])
-            from views.content_detail import content_detail_view
 
-            page.views.append(content_detail_view(page, content_id))
         elif route == "/monsters":
             from views.monster_list import monster_list_view
-
             page.views.append(monster_list_view(page))
-        elif route.startswith("/monsters/"):
-            monster_id = int(route.split("/")[-1])
-            from views.monster_detail import monster_detail_view
 
-            page.views.append(monster_detail_view(page, monster_id))
         elif route == "/arena":
             from views.arena_list import arena_list_view
-
             page.views.append(arena_list_view(page))
-        elif route.startswith("/arena/"):
-            team_id = int(route.split("/")[-1])
-            from views.arena_detail import arena_detail_view
 
-            page.views.append(arena_detail_view(page, team_id))
         elif route == "/team":
             from views.team_build import team_build_view
-
             page.views.append(team_build_view(page))
+
         elif route == "/team/save":
             from views.team_save import team_save_view
-
             page.views.append(team_save_view(page))
 
         page.update()
