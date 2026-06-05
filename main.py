@@ -3,7 +3,7 @@ from db.database import init_db
 
 
 def main(page: ft.Page):
-    page.title = "쿠키런: 킹덤 팀 설정"
+    page.title = "Kingdom Deck Builder"
     page.window.width = 1000
     page.window.height = 700
     page.padding = 0

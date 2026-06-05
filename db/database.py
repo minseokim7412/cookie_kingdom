@@ -270,7 +270,7 @@ def insert_sample_data():
         INSERT OR IGNORE INTO treasure VALUES
         (1, '무녀맛 쿠키의 영험한 종이부적',           1, '전체 쿠키 스킬 피해 +12%', '전체 쿠키 스킬 피해 +15%', 'treasures/treasure_1.png', 'EPIC',      '왕국 시리즈'),
         (2, '아이스크림 상인 유령의 신기루 아이스크림',  1, '전체 쿠키 HP +5%',        '전체 쿠키 HP +6%',         'treasures/treasure_2.png', 'EPIC',      '자연 시리즈'),
-        (3, '꿈을 달리는 차장의 별빛 호루라기',         1, '전체 쿠키 공격력 +8%',     '전체 쿠키 공격력 +10%',    'treasures/treasure_3.png', 'LEGENDARY', '빛의 시리즈'),
+        (3, '꿈을 달리는 차장의 별빛 호루라기',         1, '전체 쿠키 공격력 +8%',     '전체 쿠키 공격력 +10%',    'treasures/treasure_3.png', 'EPIC', '빛의 시리즈'),
         (4, '꿈꾸는 곰젤리의 반짝반짝 젤리시계',        1, '전체 쿠키 쿨타임 -10%',    '전체 쿠키 쿨타임 -12%',    'treasures/treasure_4.png', 'EPIC',      '마법사 시리즈'),
         (5, '사나운 모래 폭풍이 담긴 유리병',           1, '전체 쿠키 방어력 +15%',    '전체 쿠키 방어력 +18%',    'treasures/treasure_5.png', 'EPIC',      '왕국 시리즈')
     """)
