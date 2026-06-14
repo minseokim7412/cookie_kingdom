@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,21 +31,27 @@ def sidebar(page):
 
 
 def monster_list_view(page: ft.Page):
+    """몬스터 목록 화면을 반환하는 함수"""
     con = get_connection()
 
     def load_monsters(search=""):
+        """검색어를 포함한 몬스터 목록을 DuckDB에서 조회하는 함수"""
         return con.execute(
-            "SELECT monster_id, monster_name, hp, power, atk, def FROM monster WHERE monster_name LIKE ? ORDER BY monster_name",
+            "SELECT monster_id, monster_name, hp, power, atk, def "
+            "FROM monster WHERE monster_name LIKE ? "
+            "ORDER BY monster_name",
             [f"%{search}%"]
         ).fetchall()
 
     def build_table(rows):
+        """몬스터 목록 데이터를 DataTable 행으로 변환하는 함수"""
         data_rows = []
         for row in rows:
             monster_id, monster_name, hp, power, atk, def_ = row
             data_rows.append(
                 ft.DataRow(
                     cells=[
+                        # 아이콘 자리 (현재 더미 박스)
                         ft.DataCell(ft.Container(width=40, height=40, bgcolor="#3a3a5c", border_radius=4)),
                         ft.DataCell(ft.Text(monster_name, size=13)),
                         ft.DataCell(ft.Text(str(hp) if hp else "-", size=13)),
@@ -56,6 +63,7 @@ def monster_list_view(page: ft.Page):
             )
         return data_rows
 
+    # 몬스터 목록 테이블 생성
     table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("아이콘")),
@@ -77,6 +85,7 @@ def monster_list_view(page: ft.Page):
     )
 
     def on_search(e):
+        """검색창 입력 시 테이블을 갱신하는 이벤트 핸들러"""
         table.rows = build_table(load_monsters(e.control.value))
         page.update()
 
@@ -98,7 +107,6 @@ def monster_list_view(page: ft.Page):
                                 content=ft.Row(
                                     controls=[
                                         ft.TextField(hint_text="몬스터 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
-                                        ft.ElevatedButton("필터 ▼"),
                                     ]
                                 ),
                                 padding=ft.Padding(left=16, right=16, top=0, bottom=0),

@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,23 +31,28 @@ def sidebar(page):
 
 
 def team_build_view(page: ft.Page):
+    """팀 편성 화면을 반환하는 함수"""
     con = get_connection()
 
+    # 드롭다운 옵션용 데이터 조회
     cookies = con.execute("SELECT cookie_id, cookie_name FROM cookie ORDER BY cookie_name").fetchall()
     tarts = con.execute("SELECT tart_id, tart_name FROM tart ORDER BY tart_name").fetchall()
     biscuits = con.execute("SELECT biscuit_id, biscuit_name FROM biscuit ORDER BY biscuit_name").fetchall()
     treasures = con.execute("SELECT treasure_id, treasure_name FROM treasure ORDER BY treasure_name").fetchall()
     contents = con.execute("SELECT content_id, content_name FROM content ORDER BY content_name").fetchall()
 
+    # 드롭다운 옵션 생성
     cookie_options = [ft.dropdown.Option(str(c[0]), c[1]) for c in cookies]
     tart_options = [ft.dropdown.Option(str(t[0]), t[1]) for t in tarts]
     biscuit_options = [ft.dropdown.Option(str(b[0]), b[1]) for b in biscuits]
     treasure_options = [ft.dropdown.Option(str(t[0]), t[1]) for t in treasures]
     content_options = [ft.dropdown.Option(str(c[0]), c[1]) for c in contents]
 
+    # 컨텐츠 선택 드롭다운 및 팀 이름 입력 필드
     content_dd = ft.Dropdown(label="컨텐츠 선택", options=content_options, width=300)
     team_name_field = ft.TextField(label="팀 이름 입력", width=200)
 
+    # 슬롯 5개 생성 (각 슬롯은 쿠키, 레벨, 별, 초월, 토핑, 비스킷 선택 드롭다운 포함)
     slots = []
     for i in range(5):
         slots.append({
@@ -58,23 +64,30 @@ def team_build_view(page: ft.Page):
             "biscuit": ft.Dropdown(label="비스킷", options=biscuit_options, width=150),
         })
 
+    # 보물 선택 드롭다운 3개
     treasure_dds = [
         ft.Dropdown(label=f"보물 {i+1}", options=treasure_options, width=150)
         for i in range(3)
     ]
 
     def save_team(e):
+        """팀 편성 저장 버튼 클릭 시 DuckDB에 팀 정보를 저장하는 함수"""
         con2 = get_connection()
+
+        # 팀 ID 자동 증가
         team_id = con2.execute("SELECT COALESCE(MAX(team_id), 0) + 1 FROM team").fetchone()[0]
         content_id = int(content_dd.value) if content_dd.value else None
 
+        # team 테이블에 팀 기본 정보 삽입
         con2.execute(
             "INSERT INTO team VALUES (?, ?, NULL, CURRENT_TIMESTAMP, ?)",
             [team_id, team_name_field.value or f"팀 {team_id}", content_id]
         )
 
+        # 슬롯별 쿠키 구성 삽입
         for i, slot in enumerate(slots):
             if slot["cookie"].value:
+                # team_cookie ID 자동 증가
                 tc_id = con2.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM team_cookie").fetchone()[0]
                 con2.execute(
                     "INSERT INTO team_cookie VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -83,7 +96,7 @@ def team_build_view(page: ft.Page):
                         int(slot["level"].value) if slot["level"].value else 1,
                         int(slot["star"].value) if slot["star"].value else 0,
                         int(slot["transcendence"].value) if slot["transcendence"].value else 0,
-                        i + 1,
+                        i + 1,  # 슬롯 번호 (1~5)
                         team_id,
                         int(slot["cookie"].value),
                         int(slot["tart"].value) if slot["tart"].value else None,
@@ -92,8 +105,10 @@ def team_build_view(page: ft.Page):
                 )
 
         con2.close()
+        # 저장 완료 후 저장된 팀 편성 화면으로 이동
         page.go("/team/save")
 
+    # 슬롯 행 UI 생성
     slot_rows = []
     for i, slot in enumerate(slots):
         slot_rows.append(
@@ -133,6 +148,7 @@ def team_build_view(page: ft.Page):
                                     controls=[
                                         ft.Row(
                                             controls=[
+                                                # 팀편성 및 컨텐츠 선택
                                                 ft.Column(
                                                     controls=[
                                                         ft.Text("팀편성", size=16, weight=ft.FontWeight.BOLD),
@@ -140,6 +156,7 @@ def team_build_view(page: ft.Page):
                                                     ],
                                                     spacing=8,
                                                 ),
+                                                # 보물 선택 (최대 3개)
                                                 ft.Column(
                                                     controls=[
                                                         ft.Text("보물 선택(최대 3개)", size=16, weight=ft.FontWeight.BOLD),
@@ -154,6 +171,7 @@ def team_build_view(page: ft.Page):
                                         ft.Text("쿠키편성(최대 5명)", size=14, weight=ft.FontWeight.BOLD),
                                         *slot_rows,
                                         ft.Divider(),
+                                        # 팀 이름 입력 및 저장 버튼
                                         ft.Row(
                                             controls=[
                                                 team_name_field,

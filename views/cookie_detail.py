@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,8 +31,10 @@ def sidebar(page):
 
 
 def cookie_detail_view(page: ft.Page, cookie_id: int):
+    """쿠키 상세 화면을 반환하는 함수"""
     con = get_connection()
 
+    # cookie, grade, attribute, position, cookie_type 5개 테이블 JOIN으로 상세 정보 조회
     row = con.execute(
         """
         SELECT c.cookie_id, c.cookie_name, c.image_path,
@@ -49,6 +52,7 @@ def cookie_detail_view(page: ft.Page, cookie_id: int):
         [cookie_id]
     ).fetchone()
 
+    # 쿠키 정보가 없으면 오류 화면 반환
     if not row:
         return ft.View(
             route=f"/cookies/{cookie_id}",
@@ -57,6 +61,7 @@ def cookie_detail_view(page: ft.Page, cookie_id: int):
 
     _, cookie_name, image_path, grade_code, grade_name, attribute_name, position_name, cookie_type_name = row
 
+    # 이미지 경로가 있으면 이미지 출력, 없으면 빈 박스 표시
     if image_path:
         img = ft.Image(src=image_path, width=180, height=180, fit="contain")
     else:
@@ -72,10 +77,12 @@ def cookie_detail_view(page: ft.Page, cookie_id: int):
                     ft.VerticalDivider(width=1),
                     ft.Column(
                         controls=[
+                            # 목록으로 돌아가는 버튼
                             ft.Container(
                                 content=ft.ElevatedButton("← 목록", on_click=lambda e: page.go("/cookies")),
                                 padding=16,
                             ),
+                            # 쿠키 이미지 및 기본 정보
                             ft.Container(
                                 content=ft.Row(
                                     controls=[
@@ -96,6 +103,7 @@ def cookie_detail_view(page: ft.Page, cookie_id: int):
                                 padding=16,
                             ),
                             ft.Divider(),
+                            # 레벨/승급/초월 정보
                             ft.Container(
                                 content=ft.Column(
                                     controls=[
@@ -114,6 +122,7 @@ def cookie_detail_view(page: ft.Page, cookie_id: int):
                                 padding=16,
                             ),
                             ft.Divider(),
+                            # 스킬 정보 (더미 텍스트)
                             ft.Container(
                                 content=ft.Column(
                                     controls=[

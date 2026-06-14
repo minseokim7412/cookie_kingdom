@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,9 +31,11 @@ def sidebar(page):
 
 
 def team_save_view(page: ft.Page):
+    """저장된 팀 편성 목록 화면을 반환하는 함수"""
     con = get_connection()
 
     def load_teams():
+        """저장된 팀 편성 목록을 DuckDB에서 조회하는 함수 - team과 content 테이블 LEFT JOIN"""
         return con.execute(
             """
             SELECT t.team_id, t.team_name, c.content_name, t.created_at
@@ -43,18 +46,23 @@ def team_save_view(page: ft.Page):
         ).fetchall()
 
     def delete_team(team_id):
+        """팀 삭제 함수 - team_cookie 먼저 삭제 후 team 삭제"""
         con2 = get_connection()
+        # 외래키 제약으로 인해 team_cookie 먼저 삭제
         con2.execute("DELETE FROM team_cookie WHERE team_id = ?", [team_id])
         con2.execute("DELETE FROM team WHERE team_id = ?", [team_id])
         con2.close()
+        # 목록 갱신
         refresh()
 
     list_column = ft.Column(scroll=ft.ScrollMode.AUTO, spacing=8)
 
     def build_list(rows):
+        """저장된 팀 목록 데이터를 카드 형태로 변환하는 함수"""
         items = []
         for row in rows:
             team_id, team_name, content_name, created_at = row
+            # 날짜 형식 변환 (YYYY-MM-DD)
             created_str = str(created_at)[:10] if created_at else "-"
             items.append(
                 ft.Container(
@@ -71,8 +79,13 @@ def team_save_view(page: ft.Page):
                             ),
                             ft.Column(
                                 controls=[
-                                    ft.ElevatedButton("불러오기", on_click=lambda e, tid=team_id: page.go(f"/team?load={tid}")),
-                                    ft.ElevatedButton("삭제", on_click=lambda e, tid=team_id: delete_team(tid), bgcolor="red", color="white"),
+                                    # 삭제 버튼 - 빨간색으로 강조
+                                    ft.ElevatedButton(
+                                        "삭제",
+                                        on_click=lambda e, tid=team_id: delete_team(tid),
+                                        bgcolor="red",
+                                        color="white"
+                                    ),
                                 ],
                                 spacing=4,
                             ),
@@ -91,10 +104,12 @@ def team_save_view(page: ft.Page):
         return items
 
     def refresh():
+        """저장된 팀 목록을 갱신하는 함수"""
         rows = load_teams()
         list_column.controls = build_list(rows) if rows else [ft.Text("저장된 팀 편성이 없습니다.", color="grey")]
         page.update()
 
+    # 초기 팀 목록 로드
     refresh()
 
     return ft.View(
@@ -107,6 +122,7 @@ def team_save_view(page: ft.Page):
                     ft.VerticalDivider(width=1),
                     ft.Column(
                         controls=[
+                            # 팀편성 화면으로 돌아가는 버튼
                             ft.Container(
                                 content=ft.ElevatedButton("← 팀편성으로", on_click=lambda e: page.go("/team")),
                                 padding=16,

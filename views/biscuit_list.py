@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,22 +31,30 @@ def sidebar(page):
 
 
 def biscuit_list_view(page: ft.Page):
+    """비스킷 목록 화면을 반환하는 함수"""
     con = get_connection()
 
     def load_biscuits(search=""):
+        """검색어를 포함한 비스킷 목록을 DuckDB에서 조회하는 함수"""
         return con.execute(
-            "SELECT biscuit_id, biscuit_name, grade_code, atk, hp, extra_stat, image_path FROM biscuit WHERE biscuit_name LIKE ? ORDER BY grade_code, biscuit_name",
+            "SELECT biscuit_id, biscuit_name, grade_code, atk, hp, extra_stat, image_path "
+            "FROM biscuit WHERE biscuit_name LIKE ? "
+            "ORDER BY grade_code, biscuit_name",
             [f"%{search}%"]
         ).fetchall()
 
     def build_table(rows):
+        """비스킷 목록 데이터를 DataTable 행으로 변환하는 함수"""
         data_rows = []
         for row in rows:
             biscuit_id, biscuit_name, grade_code, atk, hp, extra_stat, image_path = row
+
+            # 이미지 경로가 있으면 이미지 출력, 없으면 빈 박스 표시
             if image_path:
                 icon = ft.Image(src=image_path, width=40, height=40, fit="contain")
             else:
                 icon = ft.Container(width=40, height=40, bgcolor="#3a3a5c", border_radius=4)
+
             data_rows.append(
                 ft.DataRow(
                     cells=[
@@ -56,11 +65,11 @@ def biscuit_list_view(page: ft.Page):
                         ft.DataCell(ft.Text(str(hp) if hp else "-", size=13)),
                         ft.DataCell(ft.Text(extra_stat or "-", size=13)),
                     ],
-                    on_select_change=lambda e, bid=biscuit_id: page.go(f"/biscuits/{bid}"),
                 )
             )
         return data_rows
 
+    # 비스킷 목록 테이블 생성
     table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("아이콘")),
@@ -82,6 +91,7 @@ def biscuit_list_view(page: ft.Page):
     )
 
     def on_search(e):
+        """검색창 입력 시 테이블을 갱신하는 이벤트 핸들러"""
         table.rows = build_table(load_biscuits(e.control.value))
         page.update()
 
@@ -103,7 +113,6 @@ def biscuit_list_view(page: ft.Page):
                                 content=ft.Row(
                                     controls=[
                                         ft.TextField(hint_text="비스킷 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
-                                        ft.ElevatedButton("필터 ▼"),
                                     ]
                                 ),
                                 padding=ft.Padding(left=16, right=16, top=0, bottom=0),

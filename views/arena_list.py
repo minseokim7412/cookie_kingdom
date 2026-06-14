@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,15 +31,20 @@ def sidebar(page):
 
 
 def arena_list_view(page: ft.Page):
+    """아레나 방어팀 목록 화면을 반환하는 함수"""
     con = get_connection()
 
     def load_teams(search=""):
+        """검색어를 포함한 아레나 방어팀 목록을 DuckDB에서 조회하는 함수"""
         return con.execute(
-            "SELECT team_id, user_name, memo FROM arena_defense_team WHERE user_name LIKE ? ORDER BY team_id",
+            "SELECT team_id, user_name, memo "
+            "FROM arena_defense_team WHERE user_name LIKE ? "
+            "ORDER BY team_id",
             [f"%{search}%"]
         ).fetchall()
 
     def get_team_cookies(team_id):
+        """특정 방어팀의 쿠키 구성을 조회하는 함수 - arena_team_cookie와 cookie 테이블 JOIN"""
         return con.execute(
             """
             SELECT c.cookie_name
@@ -51,6 +57,7 @@ def arena_list_view(page: ft.Page):
         ).fetchall()
 
     def get_team_treasures(team_id):
+        """특정 방어팀의 보물 구성을 조회하는 함수 - arena_team_treasure와 treasure 테이블 JOIN"""
         return con.execute(
             """
             SELECT t.treasure_name
@@ -63,13 +70,19 @@ def arena_list_view(page: ft.Page):
         ).fetchall()
 
     def build_list(rows):
+        """방어팀 목록 데이터를 카드 형태로 변환하는 함수"""
         items = []
         for row in rows:
             team_id, user_name, memo = row
+
+            # 쿠키 및 보물 구성 조회
             cookies = get_team_cookies(team_id)
             treasures = get_team_treasures(team_id)
+
+            # 쿠키/보물 이름을 쉼표로 구분하여 문자열로 변환
             cookie_text = ", ".join([c[0] for c in cookies]) if cookies else "-"
             treasure_text = ", ".join([t[0] for t in treasures]) if treasures else "-"
+
             items.append(
                 ft.Container(
                     content=ft.Row(
@@ -101,13 +114,16 @@ def arena_list_view(page: ft.Page):
     list_column = ft.Column(scroll=ft.ScrollMode.AUTO)
 
     def refresh(search=""):
+        """검색어에 맞게 목록을 갱신하는 함수"""
         rows = load_teams(search)
         list_column.controls = build_list(rows) if rows else [ft.Text("방어팀 데이터가 없습니다.", color="grey")]
         page.update()
 
     def on_search(e):
+        """검색창 입력 시 호출되는 이벤트 핸들러"""
         refresh(e.control.value)
 
+    # 초기 방어팀 목록 로드
     refresh()
 
     return ft.View(
@@ -128,7 +144,6 @@ def arena_list_view(page: ft.Page):
                                 content=ft.Row(
                                     controls=[
                                         ft.TextField(hint_text="방어팀 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
-                                        ft.ElevatedButton("필터 ▼"),
                                     ]
                                 ),
                                 padding=ft.Padding(left=16, right=16, top=0, bottom=0),

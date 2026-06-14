@@ -3,6 +3,7 @@ from db.database import get_connection
 
 
 def sidebar(page):
+    """사이드바 네비게이션 메뉴를 반환하는 함수"""
     def nav(route):
         page.go(route)
     return ft.Container(
@@ -30,22 +31,30 @@ def sidebar(page):
 
 
 def topping_list_view(page: ft.Page):
+    """타르트 목록 화면을 반환하는 함수"""
     con = get_connection()
 
     def load_tarts(search=""):
+        """검색어를 포함한 타르트 목록을 DuckDB에서 조회하는 함수"""
         return con.execute(
-            "SELECT tart_id, tart_name, grade_code, stat, set_effect, image_path FROM tart WHERE tart_name LIKE ? ORDER BY grade_code, tart_name",
+            "SELECT tart_id, tart_name, grade_code, stat, set_effect, image_path "
+            "FROM tart WHERE tart_name LIKE ? "
+            "ORDER BY grade_code, tart_name",
             [f"%{search}%"]
         ).fetchall()
 
     def build_table(rows):
+        """타르트 목록 데이터를 DataTable 행으로 변환하는 함수"""
         data_rows = []
         for row in rows:
             tart_id, tart_name, grade_code, stat, set_effect, image_path = row
+
+            # 이미지 경로가 있으면 이미지 출력, 없으면 빈 박스 표시
             if image_path:
                 icon = ft.Image(src=image_path, width=40, height=40, fit="contain")
             else:
                 icon = ft.Container(width=40, height=40, bgcolor="#3a3a5c", border_radius=4)
+
             data_rows.append(
                 ft.DataRow(
                     cells=[
@@ -55,11 +64,11 @@ def topping_list_view(page: ft.Page):
                         ft.DataCell(ft.Text(str(stat) if stat else "-", size=13)),
                         ft.DataCell(ft.Text(set_effect or "-", size=13)),
                     ],
-                    on_select_change=lambda e, tid=tart_id: page.go(f"/toppings/{tid}"),
                 )
             )
         return data_rows
 
+    # 타르트 목록 테이블 생성
     table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("아이콘")),
@@ -80,6 +89,7 @@ def topping_list_view(page: ft.Page):
     )
 
     def on_search(e):
+        """검색창 입력 시 테이블을 갱신하는 이벤트 핸들러"""
         table.rows = build_table(load_tarts(e.control.value))
         page.update()
 
@@ -101,7 +111,6 @@ def topping_list_view(page: ft.Page):
                                 content=ft.Row(
                                     controls=[
                                         ft.TextField(hint_text="타르트 검색", expand=True, on_change=on_search, prefix_icon=ft.Icons.SEARCH),
-                                        ft.ElevatedButton("필터 ▼"),
                                     ]
                                 ),
                                 padding=ft.Padding(left=16, right=16, top=0, bottom=0),
